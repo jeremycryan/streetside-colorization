@@ -1,3 +1,9 @@
+# Don't add API key to Git
+*.key
+
+# Pycharm directories
+.idea/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
