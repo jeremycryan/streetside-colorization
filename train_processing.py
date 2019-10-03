@@ -2,7 +2,8 @@ from PIL import Image
 import os
 
 input_dir = "photos"
-output_dir = "test-data"
+grayscale_output_dir = "grayscale_imgs"
+color_output_dir = "color_imgs"
 
 output_size = 0.1
 crop_margin = 70  # Crop happens before downsample
@@ -12,15 +13,19 @@ def get_images(path):
     paths = os.listdir(path)
     img_paths = [item for item in paths if item.lower().endswith(".jpg")]
     for path in img_paths:
-        image = Image.open(os.path.join(input_dir, path))
-        yield path, image
+        if not path.endswith('_0.jpg') and not path.endswith('_5.jpg'):
+            image = Image.open(os.path.join(input_dir, path))
+            yield path, image
 
 
-def process_images(image_iter, output_image_dir):
+def process_images(image_iter):
     
     # Make output directory, if it doesn't exist
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    if not os.path.exists(color_output_dir):
+        os.makedirs(color_output_dir)
+
+    if not os.path.exists(grayscale_output_dir):
+        os.makedirs(grayscale_output_dir)
 
     for path, image in image_iter:
 
@@ -36,10 +41,18 @@ def process_images(image_iter, output_image_dir):
         resized = cropped.resize((new_width, new_height))
 
         # Write file
-        write_path = os.path.join(output_dir, path)
+        write_path = os.path.join(color_output_dir, path)
+        resized.save(write_path, "JPEG")
+
+        # Grayscale-ize them
+        resized = resized.convert('L')
+
+        # Write file
+        write_path = os.path.join(grayscale_output_dir, path)
         resized.save(write_path, "JPEG")
 
 
 if __name__ == "__main__":
     image_iter = get_images(input_dir)
-    process_images(image_iter, output_dir)
+    process_images(image_iter)
+    #np.asarray() Image.open('grayscale_imgs/009900_0.jpg')
