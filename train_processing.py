@@ -55,4 +55,3 @@ def process_images(image_iter):
 if __name__ == "__main__":
     image_iter = get_images(input_dir)
     process_images(image_iter)
-    #np.asarray() Image.open('grayscale_imgs/009900_0.jpg')
