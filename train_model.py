@@ -1,6 +1,7 @@
 from PIL import Image
 import numpy as np
 import torch
+import torch.utils.data as d
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
@@ -22,15 +23,17 @@ def get_images(input_dir):
             yield image
 
 def format_color_images():
-    imgs = list(get_images(color_dir))[:4]
+    imgs = list(get_images(color_dir))
     data = [np.expand_dims(np.array(i), axis=3) for i in imgs]
     data = np.concatenate((*data,), axis=3)
     return data
 
 def format_grayscale_images():
-    imgs = list(get_images(grayscale_dir))[:4]
+    imgs = list(get_images(grayscale_dir))
     data = [np.expand_dims(np.array(i), axis=3) for i in imgs]
-    data = np.concatenate((*data,), axis=2)
+    data = np.asarray((*data,))
+    print(data.shape)
+    #data = np.concatenate((*data,), axis=2)
     return data
 
 class ColorizeCNN(nn.Module):
@@ -38,28 +41,29 @@ class ColorizeCNN(nn.Module):
         super(ColorizeCNN, self).__init__()
         self.pool = nn.MaxPool2d(2, 2)
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv1 = nn.Conv2d(1, 2, 5, padding=2)
-        self.conv2 = nn.Conv2d(2, 4, 5, padding=2)
-        self.conv3a = nn.Conv2d(4, 4, 5, padding=2)
-        self.conv3b = nn.Conv2d(4, 4, 5, padding=2)
-        self.conv4a = nn.Conv2d(4, 2, 5, padding=2)
-        self.conv4b = nn.Conv2d(4, 2, 5, padding=2)
-        self.conv5a = nn.Conv2d(2, 1, 5, padding=2)
-        self.conv5b = nn.Conv2d(2, 1, 5, padding=2)
+        self.conv1 = nn.Conv2d(1, 2, 3, padding=1)
+        self.conv2 = nn.Conv2d(2, 4, 3, padding=1)
+        self.conv3a = nn.Conv2d(4, 4, 3, padding=1)
+        self.conv3b = nn.Conv2d(4, 4, 3, padding=1)
+        self.conv4a = nn.Conv2d(4, 2, 3, padding=1)
+        self.conv4b = nn.Conv2d(4, 2, 3, padding=1)
+        self.conv5a = nn.Conv2d(2, 1, 3, padding=1)
+        self.conv5b = nn.Conv2d(2, 1, 3, padding=1)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
+
         y = x
         x = F.relu(self.conv3a(x))
         y = F.relu(self.conv3b(y))
-        x = self.relu(self.conv4a(self.upsample(x)))
-        y = self.relu(self.conv4b(self.upsample(y)))
-        x = self.relu(self.conv5a(self.upsample(x)))
-        y = self.relu(self.conv5b(self.upsample(y)))
+        x = F.relu(self.conv4a(self.upsample(x)))
+        y = F.relu(self.conv4b(self.upsample(y)))
+        x = F.relu(self.conv5a(self.upsample(x)))
+        y = F.relu(self.conv5b(self.upsample(y)))
 
-        print(type(x))
-        return np.concatenate([x, y], axis=2)
+        #print(type(x))
+        return torch.cat([x, y], 1)
     
 
 if __name__ == '__main__':
@@ -73,16 +77,21 @@ if __name__ == '__main__':
         img_lab = rgb2lab(np.asarray(img))
         img_lab = (img_lab + 128) / 255
         img_ab = img_lab[:, :, 1:3]
-        img_ab = torch.from_numpy(img_ab.transpose((2, 0, 1))).float()
+        img_ab = img_ab.transpose((2, 0, 1))
         labels.append(img_ab)
+
+    labels = torch.from_numpy(np.asarray(labels)).float()
 
     print('Loaded labels')
 
     grayscale_data = format_grayscale_images()
     training_data = []
     for img in grayscale_data:
-        img = torch.from_numpy(np.asarray(img)).float()
+        img = img.transpose((2, 0, 1))
+        img = np.asarray(img)
         training_data.append(img)
+
+    training_data = torch.from_numpy(np.asarray(training_data)).float()
 
     print('Loaded training data')
 
@@ -98,16 +107,34 @@ if __name__ == '__main__':
     print('Starting training')
 
     running_loss = 0
+    batch_size = 8
     # forward + backward + optimize
-    for i, data in enumerate(training_data):
+    for i in range(0, len(training_data) - batch_size*2, batch_size):
+    #for i in range(0, batch_size, batch_size):
+        data = training_data[i:i+batch_size]
+
         output = net(data)
-        loss = criterion(output, labels)
+        loss = criterion(output, labels[i:i+batch_size])
         loss.backward()
         optimizer.step()
 
         running_loss += loss.item()
         if i % 100 == 0:
-            print(f'Idx: {i}, Running loss: {running_loss}')
+            print(f'Idx: {i}, Running l ll ll L: {running_loss}')
             running_loss = 0
+
+    image_array = training_data[-1].numpy()
+
+    output = net(training_data[-batch_size:])
+    output = output.data.numpy()
+
+    img = output[-1]
+    img = np.concatenate((image_array, img), axis=0)
+    img = img.transpose(1, 2, 0)
+    print(img)
+    img = lab2rgb(img)
+    img = Image.fromarray(np.uint8(img))
+    img.save("some-ort_of-image.jpg", "JPEG")
+
 
     print('Done')
