@@ -9,6 +9,8 @@ Project Code: https://github.com/jeremycryan/streetside-colorization
 ## Overview
 One of the largest issues with grayscale images is their lack of color. To that end, we aimed to develop a convolutional machine learning model that would add color to colorless Google Streetview images. Utilizing the popular machine learning library PyTorch, we successfully brought vibrant color back to monotonously monotone Streetview images.
 
+This project has several use cases, perhaps most prominently the colorization of old films and photographs. Additionally, and admittedly a bit jokingly, this project has an application in image compression. By utilizing only one of the three color channels of an image, we can effectively achieve a 3:1 image compression ratio by recreating the other two channels.
+
 
 ## Dataset
 Our dataset came from the Center for Research in Computer Vision (https://www.crcv.ucf.edu/data/GMCP_Geolocalization/), and was collected for use in a paper on the application of computer vision in geo-localization.<sup>1</sup> This dataset provides 62,058 images of urban areas within the United States, with each image being of size 1280x1024. These images typically contained normal urban features such as the sky, clouds, buildings, roads, trees, cars, and people. Pictured below is a relatively standard image from the dataset.
