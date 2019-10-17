@@ -149,7 +149,7 @@ We experimented with the timing of different kernel sizes when training our netw
 
 The training time of the network appears to increase exponentially with respect to kernel size for values in the range [1, 7]. The training time for a 9x9 kernel was significantly higher, but we suspect that the bottleneck was actually the computer's memory management rather than compute time.
 
-This suggests that it is likely more efficient to use multiple 3x3 kernels in a network, a larger kernel with equivalent reach --- they can accomplish more complex logic, with as much positional reach, in comparable or lesser time.
+This suggests that it is likely more efficient to use multiple 3x3 kernels in a network than a larger kernel with equivalent reach --- they can accomplish more complex logic, with as much positional reach, in comparable or lesser time.
 
 ## Future Work
 While this model works well for urban environments and is able to detect many of the urban features, it is likely not scalable to other kinds of landscapes as the source of all training data comes from cities. This could be significantly improved with a more varied dataset and additional complexity within the model to aid in picking up on a more diverse set of features.
