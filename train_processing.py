@@ -1,7 +1,7 @@
 from PIL import Image
 import os
 
-input_dir = "photos"
+input_dir = "grayscale_imgs"
 grayscale_output_dir = "grayscale_imgs"
 color_output_dir = "color_imgs"
 
@@ -16,6 +16,20 @@ def get_images(path):
         if not path.endswith('_0.jpg') and not path.endswith('_5.jpg'):
             image = Image.open(os.path.join(input_dir, path))
             yield path, image
+
+
+def crop_to_multiple(image_iter, n=4):
+
+    for path, image in image_iter:
+
+        width, height = image.size
+        new_width = width//n * n
+        new_height = height//n * n
+        rect = 0, 0, new_width, new_height
+        cropped = image.crop(rect)
+        write_path = os.path.join(input_dir, path)
+
+        cropped.save(write_path, "JPEG")
 
 
 def process_images(image_iter):
@@ -36,6 +50,8 @@ def process_images(image_iter):
 
         # Resize image
         width, height = cropped.size
+        width = width//4 * 4
+        height = height//4 * 4
         new_width = int(output_size * width)
         new_height = int(output_size * height)
         resized = cropped.resize((new_width, new_height))
@@ -54,4 +70,5 @@ def process_images(image_iter):
 
 if __name__ == "__main__":
     image_iter = get_images(input_dir)
-    process_images(image_iter)
+    #process_images(image_iter)
+    crop_to_multiple(image_iter, 4)

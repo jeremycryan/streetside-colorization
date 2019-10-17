@@ -11,6 +11,7 @@ from skimage.color import lab2rgb, rgb2lab
 import pandas
 import os
 import random
+import time
 
 color_dir = 'color_imgs'
 grayscale_dir = 'grayscale_imgs'
@@ -33,8 +34,6 @@ def format_grayscale_images():
     imgs = list(get_images(grayscale_dir))
     data = [np.expand_dims(np.array(i), axis=3) for i in imgs]
     data = np.asarray((*data,))
-    print(data.shape)
-    #data = np.concatenate((*data,), axis=2)
     return data
 
 class ColorizeCNN(nn.Module):
@@ -42,12 +41,15 @@ class ColorizeCNN(nn.Module):
         super(ColorizeCNN, self).__init__()
         self.pool = nn.MaxPool2d(2, 2)
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv1 = nn.Conv2d(1, 8, 3, padding=0)
-        self.conv2 = nn.Conv2d(8, 16, 3, padding=0)
-        self.conv3 = nn.Conv2d(16, 32, 3, padding=0)
-        self.conv4 = nn.Conv2d(32, 64, 3, padding=0)
-        self.conv5 = nn.Conv2d(64, 2, 3, padding=0)
-        self.pad = lambda x: functional.pad(x, (1, 1, 1, 1), mode='replicate')
+
+        kernel_size = 3
+        pad_size = kernel_size // 2
+        self.conv1 = nn.Conv2d(1, 8, kernel_size, padding=0)
+        self.conv2 = nn.Conv2d(8, 16, kernel_size, padding=0)
+        self.conv3 = nn.Conv2d(16, 32, kernel_size, padding=0)
+        self.conv4 = nn.Conv2d(32, 64, kernel_size, padding=0)
+        self.conv5 = nn.Conv2d(64, 2, kernel_size, padding=0)
+        self.pad = lambda x: functional.pad(x, (pad_size, pad_size, pad_size, pad_size), mode='replicate')
 
     def forward(self, x):
 
@@ -104,12 +106,15 @@ if __name__ == '__main__':
 
     print('Starting training')
 
+    start_time = time.time()
+
     running_loss = 0
     batch_size = 16
     losses = [0]*10
     test_size = 10
     # forward + backward + optimize
-    for i in range(0, len(lookup) - (test_size + 1)*batch_size, batch_size):
+    #for i in range(0, len(lookup) - (test_size + 1)*batch_size, batch_size):
+    for i in range(0, 192, batch_size):
         data = training_data[i:i+batch_size]
 
         # zero the parameter gradients
@@ -126,6 +131,10 @@ if __name__ == '__main__':
             losses.pop()
             print(f'Idx: {i}, Running l ll ll L: {sum(losses)/len(losses)}')
             running_loss = 0
+
+    total_time = time.time() - start_time
+
+    print(total_time)
 
     for i in range(batch_size*test_size):
         image_array = training_data[-i].numpy() * 100/255
