@@ -3,10 +3,10 @@
 
 Project Code: https://github.com/jeremycryan/streetside-colorization
 
-<center>
+<p style="text-align: center;">
 
 ![Demo image](https://github.com/jeremycryan/streetside-colorization/blob/master/sample.jpg?raw=true)
-</center>
+</p>
 
 
 ## Overview
