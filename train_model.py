@@ -4,12 +4,13 @@ import torch
 import torch.utils.data as d
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
+import torch.nn.functional as functional
 #import torchvision
 #import torchvision.transforms as transforms
 from skimage.color import lab2rgb, rgb2lab
 import pandas
 import os
+import random
 
 color_dir = 'color_imgs'
 grayscale_dir = 'grayscale_imgs'
@@ -41,29 +42,23 @@ class ColorizeCNN(nn.Module):
         super(ColorizeCNN, self).__init__()
         self.pool = nn.MaxPool2d(2, 2)
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv1 = nn.Conv2d(1, 2, 3, padding=1)
-        self.conv2 = nn.Conv2d(2, 4, 3, padding=1)
-        self.conv3a = nn.Conv2d(4, 4, 3, padding=1)
-        self.conv3b = nn.Conv2d(4, 4, 3, padding=1)
-        self.conv4a = nn.Conv2d(4, 2, 3, padding=1)
-        self.conv4b = nn.Conv2d(4, 2, 3, padding=1)
-        self.conv5a = nn.Conv2d(2, 1, 3, padding=1)
-        self.conv5b = nn.Conv2d(2, 1, 3, padding=1)
+        self.conv1 = nn.Conv2d(1, 8, 3, padding=0)
+        self.conv2 = nn.Conv2d(8, 16, 3, padding=0)
+        self.conv3 = nn.Conv2d(16, 32, 3, padding=0)
+        self.conv4 = nn.Conv2d(32, 64, 3, padding=0)
+        self.conv5 = nn.Conv2d(64, 2, 3, padding=0)
+        self.pad = lambda x: functional.pad(x, (1, 1, 1, 1), mode='replicate')
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
 
-        y = x
-        x = F.relu(self.conv3a(x))
-        y = F.relu(self.conv3b(y))
-        x = F.relu(self.conv4a(self.upsample(x)))
-        y = F.relu(self.conv4b(self.upsample(y)))
-        x = F.relu(self.conv5a(self.upsample(x)))
-        y = F.relu(self.conv5b(self.upsample(y)))
+        x = self.pool(functional.relu(self.conv1(self.pad(x))))
+        x = self.pool(functional.relu(self.conv2(self.pad(x))))
+        
+        x = torch.sigmoid(self.conv3(self.pad(x)))
+        x = torch.sigmoid(self.conv4(self.pad(self.upsample(x))))
+        x = torch.sigmoid(self.conv5(self.pad(self.upsample(x))))
 
-        #print(type(x))
-        return torch.cat([x, y], 1)
+        return x
     
 
 if __name__ == '__main__':
@@ -80,8 +75,6 @@ if __name__ == '__main__':
         img_ab = img_ab.transpose((2, 0, 1))
         labels.append(img_ab)
 
-    labels = torch.from_numpy(np.asarray(labels)).float()
-
     print('Loaded labels')
 
     grayscale_data = format_grayscale_images()
@@ -91,27 +84,36 @@ if __name__ == '__main__':
         img = np.asarray(img)
         training_data.append(img)
 
-    training_data = torch.from_numpy(np.asarray(training_data)).float()
-
     print('Loaded training data')
 
     # define loss function
     criterion = nn.MSELoss()
 
     # define optimizer
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.Adam(net.parameters(), lr=0.00001, weight_decay=0.0)
 
-    # zero the parameter gradients
-    optimizer.zero_grad()
+    print('Starting Lookup List Creation')
+
+    lookup = list(range(len(labels)))
+    random.shuffle(lookup)
+
+    training_data = [training_data[lookup[i]] for i in range(len(training_data))]
+    training_data = torch.from_numpy(np.asarray(training_data)).float()
+    labels = [labels[lookup[i]] for i in range(len(labels))]
+    labels = torch.from_numpy(np.asarray(labels)).float()
 
     print('Starting training')
 
     running_loss = 0
-    batch_size = 8
+    batch_size = 16
+    losses = [0]*10
+    test_size = 10
     # forward + backward + optimize
-    #for i in range(0, len(training_data) - batch_size*2, batch_size):
-    for i in range(0, batch_size, batch_size):
+    for i in range(0, len(lookup) - (test_size + 1)*batch_size, batch_size):
         data = training_data[i:i+batch_size]
+
+        # zero the parameter gradients
+        optimizer.zero_grad()
 
         output = net(data)
         loss = criterion(output, labels[i:i+batch_size])
@@ -119,25 +121,36 @@ if __name__ == '__main__':
         optimizer.step()
 
         running_loss += loss.item()
-        if i % 100 == 0:
-            print(f'Idx: {i}, Running l ll ll L: {running_loss}')
+        if i % batch_size == 0:
+            losses.insert(0, running_loss)
+            losses.pop()
+            print(f'Idx: {i}, Running l ll ll L: {sum(losses)/len(losses)}')
             running_loss = 0
 
-    image_array = training_data[-1].numpy() / 255
+    for i in range(batch_size*test_size):
+        image_array = training_data[-i].numpy() * 100/255
 
-    output = net(training_data[-batch_size:])
-    output = output.data.numpy()
+        output = net(training_data[-batch_size*test_size:])
+        output = output.data.numpy()
 
-    img = output[-1]
-    img = np.concatenate((image_array, img), axis=0)
-    img = img.transpose(1, 2, 0)
+        img = output[-i]
+        img = img - 0.5
+        intensity = 50
+        img[0] = img[0] * intensity / np.max(np.abs(img[0]))
+        img[1] = img[1] * intensity / np.max(np.abs(img[1]))
+        img = np.concatenate((image_array, img), axis=0)
+        img = img.transpose(1, 2, 0)
 
-    img = lab2rgb(img)
+        img = lab2rgb(img)
 
-    print(img)
-    img = Image.fromarray(np.uint8(img * 255))
+        img = Image.fromarray(np.uint8(img * 255))
 
-    img.save("some-ort_of-image.jpg", "JPEG")
+        img.save("some-ort_of-image" + str(i) + ".jpg", "JPEG")
 
 
     print('Done')
+
+
+# l: 0 - 100
+# a: -86.185 - 98.254
+# b: -107.863 - 94.482
