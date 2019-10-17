@@ -3,10 +3,7 @@
 
 Project Code: https://github.com/jeremycryan/streetside-colorization
 
-<p style="text-align: center;">
-
 ![Demo image](https://github.com/jeremycryan/streetside-colorization/blob/master/sample.jpg?raw=true)
-</p>
 
 
 ## Overview
@@ -14,39 +11,32 @@ One of the largest issues with grayscale images is their lack of color. To that 
 
 
 ## Dataset
-Our dataset came from the Center for Research in Computer Vision (https://www.crcv.ucf.edu/data/GMCP_Geolocalization/), and was collected for use in a paper on the application of computer vision in geo-localization.[^1] This dataset provides 62,058 images of urban areas within the United States, with each image being of size 1280x1024. These images typically contained normal urban features such as the sky, clouds, buildings, roads, trees, cars, and people. Pictured below is a relatively standard image from the dataset.
-
-<center>
+Our dataset came from the Center for Research in Computer Vision (https://www.crcv.ucf.edu/data/GMCP_Geolocalization/), and was collected for use in a paper on the application of computer vision in geo-localization.<sup>1</sup> This dataset provides 62,058 images of urban areas within the United States, with each image being of size 1280x1024. These images typically contained normal urban features such as the sky, clouds, buildings, roads, trees, cars, and people. Pictured below is a relatively standard image from the dataset.
 
 ![Example image from the dataset](https://i.imgur.com/zWy3xPE.jpg)
+
 *Example image from the dataset*
-</center>
+
 
 ## Preprocessing
 We immediately noticed some small issues with the dataset that would make this dataset difficult to use for our purposes. Perhaps most glaringly, most of the images include some vestigial Google Streetview GUI elements. Additionally, they are much too large to train a convolutional network on with our limited computational and time resources. Luckily, the GUI elements can be easily cropped out, and the image can be downscaled to a more reasonable size. After cropping and downscaling the images by a factor of 11 to size 112x88, we had data that we were confident would work well for us.
 
 The images were then converted from RGB color space to LAB color space --- Lightness, Alpha, Beta --- to create both our training data and our labels. Our input training data is simply the Lightness channel of the image, effectively a grayscale representation devoid of color, while the labels are the other two channels, as these channels represent the colors that the model should output. After passing the Lightness channel input data through the network, we can append on the other two trained output channels and convert the image back into RGB color space to be displayed. An example grayscale (training) image and color (label) image are pictured below.
 
-<center>
 
 ![Grayscale Image (training)](https://i.imgur.com/26dwF7p.jpg) ![Color Image (label)](https://i.imgur.com/dt7WgkR.jpg)
+
 *Cropped and Downscaled Images*
-</center>
-
-
-
-
 
 
 ## Model
 
 Below is a block diagram of our final network.
 
-<center>
 
 ![Network block diagram](https://github.com/jeremycryan/streetside-colorization/blob/master/block_diagram.png?raw=true)
+
 *Convolutional Network Block Diagram*
-</center>
 
 In order to give our network a high degree of agency over the output, we put our data through a series of several convolutions and sampling operations. 
 
@@ -102,11 +92,11 @@ Our network calculates loss using mean squared error (```nn.MSELoss```). Althoug
 
 We trained our network on 6,000 of our sample images, with a batch size of 16. We calculated the loss for each batch and plotted it over time, with a moving average of ten batches.
 
-<center>
 
 ![Training Loss Over Time](https://github.com/jeremycryan/streetside-colorization/blob/master/training_loss.png?raw=true)
+
 *Mean Squared Error Loss vs Batch Number*
-</center>
+
 
 In the first batches, up to batch 60 or so, loss decreases approximately exponentially, reaching a minimum of just under 7 x 10<sup>-4</sup>. After this point, it stays approximately steady, even though we continue training for a few hundred batches.
 
@@ -116,7 +106,6 @@ Additionally, our outputs tended to be very close to monochrome (with alpha and 
 
 The following images are example outputs from our network, with normalized AB values:
 
-<center>
 
 ![](https://i.imgur.com/A2KQThc.jpg)![](https://i.imgur.com/hnvzNhc.jpg) ![](https://i.imgur.com/XyTb0pX.jpg)![](https://i.imgur.com/6QX3LHQ.jpg)
 
@@ -128,7 +117,6 @@ The following images are example outputs from our network, with normalized AB va
 
 *Grayscale images compared to our colorized versions*
 
-</center>
 
 
 ## Explorations
@@ -141,11 +129,11 @@ We experimented with using ```nn.L1Loss``` instead of ```nn.MSELoss``` to train 
 
 The following is a plot of loss over time with each of these training methods:
 
-<center>
 
 ![Plot of L1 Loss vs MSE Loss](https://github.com/jeremycryan/streetside-colorization/blob/master/training_loss_l1.png?raw=true)
+
 *MSE Loss & L1 Loss vs Batch Number*
-</center>
+
 
 The mean squared error function appears to reach a minimum and stabilize significantly faster than the L1 loss function with the same learning rate, reaching its minimum around batch 50 compared to approximately batch 100. 
 
@@ -153,11 +141,11 @@ The mean squared error function appears to reach a minimum and stabilize signifi
 
 We experimented with the timing of different kernel sizes when training our network.
 
-<center>
 
 ![Graph of Training Time by Kernel Size](https://github.com/jeremycryan/streetside-colorization/blob/master/training_time_kernel.png?raw=true)
+
 *Training Time vs Kernel Width*
-</center>
+
 
 The training time of the network appears to increase exponentially with respect to kernel size for values in the range [1, 7]. The training time for a 9x9 kernel was significantly higher, but we suspect that the bottleneck was actually the computer's memory management rather than compute time.
 
@@ -171,5 +159,6 @@ Additionally, the input and output images are quite small. With additional time 
 Overall we are quite proud of what we were able to accomplish in this project. We successfully trained a convolutional machine learning model to detect and somewhat accurately color features in grayscale urban environments.
 
 
-
-[^1]: Amir Roshan Zamir and Mubarak Shah, *"Image Geo-localization Based on Multiple Nearest Neighbor Feature Matching using Generalized Graphs"*, IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI), 2014
+&nbsp;
+&nbsp;
+Footnote 1: Amir Roshan Zamir and Mubarak Shah, *"Image Geo-localization Based on Multiple Nearest Neighbor Feature Matching using Generalized Graphs"*, IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI), 2014
