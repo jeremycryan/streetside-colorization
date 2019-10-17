@@ -109,8 +109,8 @@ if __name__ == '__main__':
     running_loss = 0
     batch_size = 8
     # forward + backward + optimize
-    for i in range(0, len(training_data) - batch_size*2, batch_size):
-    #for i in range(0, batch_size, batch_size):
+    #for i in range(0, len(training_data) - batch_size*2, batch_size):
+    for i in range(0, batch_size, batch_size):
         data = training_data[i:i+batch_size]
 
         output = net(data)
@@ -123,7 +123,7 @@ if __name__ == '__main__':
             print(f'Idx: {i}, Running l ll ll L: {running_loss}')
             running_loss = 0
 
-    image_array = training_data[-1].numpy()
+    image_array = training_data[-1].numpy() / 255
 
     output = net(training_data[-batch_size:])
     output = output.data.numpy()
@@ -131,9 +131,12 @@ if __name__ == '__main__':
     img = output[-1]
     img = np.concatenate((image_array, img), axis=0)
     img = img.transpose(1, 2, 0)
-    print(img)
+
     img = lab2rgb(img)
-    img = Image.fromarray(np.uint8(img))
+
+    print(img)
+    img = Image.fromarray(np.uint8(img * 255))
+
     img.save("some-ort_of-image.jpg", "JPEG")
 
 
